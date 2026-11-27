@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Refat Hany | GIS & Remote Sensing</title>
+<meta name="description" content="Interactive GIS and remote sensing portfolio by Refat Hany: DEM, 3D terrain, NDVI, geology and network analysis on a live globe.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;500;800&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="meta.js"></script>
+<style>
+:root{--fg:#f4efe6;--mut:#b9c2d6;--ac:#a9c8ff;--ease:cubic-bezier(.77,0,.18,1)}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#02030a;color:var(--fg);font:400 1.05rem/1.6 'Instrument Sans',system-ui,sans-serif}
+h1,h2,h3,b{font-family:'Bricolage Grotesque',system-ui,sans-serif;line-height:.98;letter-spacing:-.03em}
+a{color:inherit}
+small{color:var(--ac);font-weight:500;font-size:1rem}
+#cz{position:fixed;inset:0;z-index:0}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.cesium-widget-credits{font-size:10px!important;opacity:.7}
+main{position:fixed;inset:0;z-index:2}
+.sc{position:absolute;inset:0;overflow:hidden;opacity:0;visibility:hidden}
+.sc.on{opacity:1;visibility:visible}
+.a{opacity:0;transform:translateY(34px);filter:blur(6px);transition:opacity .9s,transform 1s var(--ease),filter .9s;transition-delay:calc(var(--i,0)*.14s + .5s)}
+.on .a{opacity:1;transform:none;filter:none}
+#br{position:fixed;left:5vw;top:22px;z-index:40;font:800 1.2rem 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em;mix-blend-mode:difference;color:#fff}
+#fl{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:0;background:var(--fc,#fff)}
+#fl.go{animation:fp .5s 2}
+@keyframes fp{50%{opacity:.55}}
+#hud{position:fixed;left:5vw;bottom:84px;z-index:44;padding:8px 18px;border-radius:99px;background:#000a;border:1px solid #fff3;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:.92rem;opacity:0;transition:opacity .5s}
+#hud.on{opacity:1}
+
+/* intro + contact */
+.dive .in{opacity:0;transition:opacity .6s}
+.in{position:absolute;left:6vw;top:46%;transform:translateY(-56%);max-width:min(540px,88vw);z-index:3;text-shadow:0 2px 20px #000a}
+.in h1{font-size:clamp(2.8rem,6.6vw,6rem);font-weight:800;margin:.5rem 0 1.1rem}
+.in p{color:#cfd6e6;max-width:44ch}
+.in ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin-top:1.4rem}
+.in li{padding:6px 15px;border:1px solid #fff4;border-radius:99px;font-size:.92rem;background:#0006;backdrop-filter:blur(6px);transition:border-color .3s,transform .3s}
+.in li:hover{border-color:var(--ac);transform:translateY(-3px)}
+.tx2{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;padding:0 6vw;z-index:3;text-shadow:0 2px 24px #000}
+.tx2 h2{font-size:clamp(2.6rem,8vw,7rem);font-weight:800;margin:.6rem 0 1.8rem}
+.btn{display:inline-block;margin:6px;padding:14px 28px;border:1px solid #fff5;border-radius:99px;text-decoration:none;font-weight:500;background:#0005;backdrop-filter:blur(8px);transition:background .3s,color .3s,transform .3s}
+.btn:hover{background:var(--fg);color:#15101c;transform:scale(1.05)}
+
+/* cloud text slides */
+.tx{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;padding:0 6vw;color:#0b2350}
+.tx::before{content:"";position:absolute;width:min(90vw,900px);height:60vh;background:radial-gradient(closest-side,#ffffffcc,#fff0);z-index:-1}
+.tx small{color:#1f55b8;font-weight:500}
+.tx h2{font-size:clamp(2.4rem,7vw,6.2rem);font-weight:800;max-width:15ch;margin:.7rem 0 1rem;text-shadow:0 0 30px #fff}
+.tx p{color:#2c4a7a}
+
+/* map scenes: globe stays live behind, layout card opens on top */
+.cap{position:absolute;left:5vw;top:7.5vh;z-index:5;opacity:0;transition:opacity .8s;text-shadow:0 2px 14px #000}
+.cap h2{font-size:clamp(1.4rem,2.7vw,2.5rem);font-weight:800}
+.cp .cap{opacity:1}
+.map::before{content:"";position:absolute;inset:0;background:var(--bg);opacity:0;transition:opacity 1.4s}
+.map.fm::before{opacity:.72}
+.st{position:absolute;inset:14vh 4vw 12vh;display:grid;place-items:center;clip-path:circle(6% at 50% 50%);transform:scale(.8);opacity:0}
+.map.fm .st{clip-path:circle(110% at 50% 50%);transform:none;opacity:1;transition:clip-path 1.7s var(--ease),transform 1.7s var(--ease),opacity .6s}
+.map.lv .st{transform:scale(.72)!important;opacity:0!important;filter:blur(6px);transition:transform .9s var(--ease),opacity .7s,filter .9s}
+.fr{grid-area:1/1;position:relative;aspect-ratio:var(--a);height:min(74vh,calc(92vw / var(--a)));border-radius:26px;overflow:hidden;box-shadow:0 30px 80px #000a;background:#0003}
+.fr img,.fr canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lg{position:absolute;right:5vw;bottom:15vh;z-index:6;padding:16px 20px;border-radius:24px;background:#ffffff1c;border:1px solid #ffffff40;backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);opacity:0;transform:translateY(24px);transition:opacity .9s,transform .9s var(--ease)}
+.p4 .lg{opacity:1;transform:none}
+.lg b{display:block;margin-bottom:8px;font-weight:500;font-size:1rem}
+.lg p{display:flex;align-items:center;gap:10px;font-size:.88rem;line-height:1.7}
+.lg i{width:26px;height:14px;border-radius:5px;flex:none}
+.fr .lg{right:auto;left:4.8%;bottom:5.5%;width:35%;padding:12px 14px;border-radius:18px}
+.lt{top:15vh;bottom:auto;background:#ffffffc8;padding:8px}
+.lt img{display:block;max-height:70vh;max-width:30vw;border-radius:14px;mix-blend-mode:multiply}
+.ht{position:absolute;left:0;right:0;bottom:12.5vh;text-align:center;color:var(--mut);font-size:.9rem;opacity:0;transition:opacity 1s;z-index:5}
+.p4 .ht{opacity:1}
+#s2 .fr{transition:transform 1.5s var(--ease),opacity 1.2s}
+#s2 .fr.d{opacity:0;transform:perspective(1400px) rotateX(-65deg) scale(.75)}
+#s2.p3 .fr.d{opacity:1;transform:perspective(1400px) rotateX(calc(var(--rx,0)*1deg)) rotateY(calc(var(--ry,0)*1deg))}
+#s2.p4 .fr.d{transition:transform .25s}
+#s2.p3 .fr.c{opacity:0;transform:perspective(1400px) rotateX(70deg) scale(.8)}
+#s2 .k2,#s2.p3 .k1{opacity:0!important}
+#s2.cp.p3 .k2{opacity:1!important}
+#s6 .st{inset:14vh 30vw 12vh 4vw}
+#s8 .st{transition:clip-path 1.7s var(--ease),transform 1.7s var(--ease),opacity .6s}
+#s8.p5 .st{transform:translateX(-17vw)}
+.rc{position:absolute;right:4vw;top:50%;width:min(32vw,400px);z-index:6;padding:18px;border-radius:26px;background:#ffffff1c;border:1px solid #ffffff40;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;transform:translate(8vw,-50%);transition:opacity 1s,transform 1s var(--ease)}
+.p5 .rc{opacity:1;transform:translateY(-50%)}
+.rc h3{font-size:1.5rem;font-weight:800;margin:.3rem 0 .9rem}
+.rc .fr{height:auto;width:100%;border-radius:16px;box-shadow:none}
+.rc pre{font:400 .85rem/1.7 'Instrument Sans',sans-serif;color:var(--mut);margin-top:.9rem;min-height:5.2em;white-space:pre-wrap}
+
+/* nav */
+#nv{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:99px;border:1px solid #fff4;background:#000a;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;overflow:hidden;max-width:96vw}
+#nv button{font:inherit;font-size:.95rem;color:inherit;background:none;border:0;padding:6px 12px;border-radius:99px;cursor:pointer}
+#nv button:hover{background:#fff2}
+#dts{display:flex;gap:8px}
+#dts a{width:9px;height:9px;border-radius:50%;border:1px solid #fff9;transition:all .35s}
+#dts a.on{background:var(--ac);border-color:var(--ac);transform:scale(1.5)}
+#nm{font-size:.88rem;min-width:11ch;color:var(--mut)}
+#pg{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--ac)}
+@keyframes pg{to{width:100%}}
+@media(max-width:800px){.in{top:42%}#nm,#nv button#pp{display:none}.rc{width:44vw;padding:12px}#s6 .st{inset:14vh 4vw 12vh}.lt{top:auto;bottom:15vh}.lt img{max-width:40vw;max-height:30vh}#hud{bottom:78px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div id="cz"></div><canvas id="fx"></canvas><div id="fl"></div>
+<div id="br">Refat Hany · GIS</div>
+<main>
+<section class="sc" id="s0">
+  <div class="in">
+    <small class="a">GIS · Remote Sensing · 3D LiDAR</small>
+    <h1 class="a" style="--i:1">Hi, I’m<br>Refat Hany</h1>
+    <p class="a" style="--i:2">B.A. in GIS | RS, Cairo University. I turn satellite imagery and spatial data into maps that explain themselves.</p>
+    <ul class="a" style="--i:3"><li>Terrain &amp; DEM analysis</li><li>3D relief visualization</li><li>NDVI vegetation analysis</li><li>Geological mapping</li><li>Service-area &amp; route analysis</li><li>3D LiDAR data annotation</li></ul>
+  </div>
+</section>
+
+<section class="sc map" id="s2" style="--bg:radial-gradient(ellipse at 50% 25%,#3b2818,#110b07 72%)">
+  <div class="cap k1"><small>Terrain analysis · Ras El Hekma</small><h2>Drawing the land, line by line</h2></div>
+  <div class="cap k2"><small>3D visualization · Ras El Hekma</small><h2>Now the terrain stands up</h2></div>
+  <div class="st">
+    <div class="fr c" style="--a:1.468"><img src="images/c-b.jpg" alt="Contour map of Ras El Hekma"><img src="images/c-l.webp" alt=""><img src="images/c-d.webp" alt=""></div>
+    <div class="fr d" style="--a:1.176"><img src="images/3d.jpg" alt="3D relief map of Ras El Hekma"></div>
+  </div>
+  <div class="lg" id="lg3"></div>
+  <p class="ht">Move your mouse to tilt the terrain</p>
+</section>
+
+<section class="sc map" id="s4" style="--bg:radial-gradient(ellipse at 50% 25%,#173a1c,#08130a 72%)">
+  <div class="cap"><small>Vegetation analysis · Port Said</small><h2>NDVI = (NIR − Red) / (NIR + Red)</h2></div>
+  <div class="st"><div class="fr" style="--a:1.294"><img src="images/nd.jpg" alt="NDVI map of Port Said"><div class="lg" id="lgn"></div></div></div>
+</section>
+
+<section class="sc map" id="s6" style="--bg:radial-gradient(ellipse at 40% 25%,#3d1a14,#12090a 72%)">
+  <div class="cap"><small>Geological mapping · Syria</small><h2>What lies beneath the surface</h2></div>
+  <div class="st"><div class="fr" style="--a:1.103"><img src="images/gl.jpg" alt="Geological map of Syria"></div></div>
+  <div class="lg lt"><img src="images/gl-lg.jpg" alt="Geological map key"></div>
+</section>
+
+<section class="sc map" id="s8" style="--bg:radial-gradient(ellipse at 40% 25%,#3a230c,#120b05 72%)">
+  <div class="cap"><small>Service area analysis · El Shorouk</small><h2>How far does each service reach?</h2></div>
+  <div class="st"><div class="fr" style="--a:1.099"><img src="images/sh.jpg" alt="Service area analysis of El Shorouk"></div></div>
+  <div class="rc"><small>Network analysis</small><h3>Finding the optimal route</h3><div class="fr" style="--a:1.159"><canvas id="cr"></canvas></div><pre id="tp"></pre></div>
+</section>
+
+<section class="sc" id="s9">
+  <div class="tx2"><small class="a">Thanks for flying with me</small><h2 class="a" style="--i:1">Let’s map your<br>next project.</h2><div class="a" style="--i:2"><a class="btn" href="mailto:refathany2005@gmail.com">refathany2005@gmail.com</a><a class="btn" href="https://wa.me/201124527985" target="_blank" rel="noopener">WhatsApp</a></div></div>
+</section>
+</main>
+<div id="hud"></div>
+<nav id="nv"><button id="pv" aria-label="Previous slide">‹</button><div id="dts"></div><span id="nm"></span><button id="pp">Pause</button><button id="nx" aria-label="Next slide">›</button><i id="pg"></i></nav>
+
+<script>
+const $=(s,c=document)=>c.querySelector(s),$$=(s,c=document)=>[...c.querySelectorAll(s)];
+/* ---------- small tween engine (clouds only) ---------- */
+const S={cov:-1,zm:1};let TW=[];
+const ez=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+function tw(o,d,dl=0){for(const k in o)TW.forEach(w=>delete w.o[k]);TW.push({o,d,t0:performance.now()+dl})}
+function stp(now){TW=TW.filter(w=>{if(now<w.t0)return true;if(!w.f)w.f={...S};const p=Math.min(1,(now-w.t0)/w.d),e=ez(p);for(const k in w.o)S[k]=w.f[k]+(w.o[k]-w.f[k])*e;return p<1})}
+
+/* ---------- overlay: 3D satellite + GPU clouds (three.js) ---------- */
+function initFX(){
+const r=new THREE.WebGLRenderer({canvas:$('#fx'),alpha:true,antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,1.5));r.autoClear=false;r.setClearColor(0,0);
+const sc3=new THREE.Scene(),cam3=new THREE.PerspectiveCamera(40,1,.1,50);sc3.add(cam3);sc3.add(new THREE.AmbientLight(0x8a96b8,.8));const sun=new THREE.DirectionalLight(0xfff2dc,1.8);sun.position.set(-3,3,2);sc3.add(sun);
+const cu={t:{value:0},cov:{value:-1},zm:{value:1},res:{value:new THREE.Vector2(1,1)}},cs=new THREE.Scene(),oc=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+cs.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({uniforms:cu,transparent:true,depthTest:false,vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=vec4(position.xy,0.,1.);}',fragmentShader:`varying vec2 v;uniform float t,cov,zm;uniform vec2 res;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+float F(vec2 p){float s=0.,a=.5;for(int i=0;i<6;i++){s+=a*n(p);p=p*2.1+vec2(3.1,1.7);a*=.5;}return s;}
+float D(vec2 p){return F(p+F(p*.6+t*.02)*.9);}
+void main(){vec2 p=(v-.5)*vec2(res.x/res.y,1.)*2.4/zm+vec2(t*.04,t*.02);float d=D(p),o=D(p+vec2(.05,.09));
+float a=smoothstep(.5-cov*.3,.78-cov*.34,d),l=clamp(.55+(d-o)*7.,0.,1.);
+gl_FragColor=vec4(mix(vec3(.5,.6,.76),vec3(1.),l),a);}`})));
+const sat=new THREE.Group(),MT=(c,m,q,e)=>new THREE.MeshStandardMaterial({color:c,metalness:m,roughness:q,emissive:e||0}),BX=(w,h,d,m,x=0,y=0,z=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);sat.add(o)};
+const gold=MT(0xd9ac2c,.55,.4,0x2b1d00),sil=MT(0xd5dbe6,.6,.3,0x15171c);BX(.5,.4,.4,gold);BX(.52,.05,.42,sil,0,.11);BX(.52,.05,.42,sil,0,-.11);
+const pc=document.createElement('canvas');pc.width=256;pc.height=128;const px=pc.getContext('2d');px.fillStyle='#12399a';px.fillRect(0,0,256,128);px.strokeStyle='#7aa8ff';px.lineWidth=2;for(let i=0;i<=8;i++){px.moveTo(i*32,0);px.lineTo(i*32,128)}for(let j=0;j<=4;j++){px.moveTo(0,j*32);px.lineTo(256,j*32)}px.stroke();
+const pm=MT(0xffffff,.35,.3,0x061633);pm.map=new THREE.CanvasTexture(pc);[-1,1].forEach(s=>{BX(.14,.04,.04,sil,s*.32);BX(1,.02,.46,pm,s*.9)});
+const dsh=new THREE.Mesh(new THREE.SphereGeometry(.2,28,14,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xf3f5f9,metalness:.3,roughness:.35,side:THREE.DoubleSide}));dsh.position.set(0,.4,.08);dsh.rotation.x=-.9;sat.add(dsh);
+const tel=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,.3,24),MT(0x23262e,.4,.4));tel.position.y=-.3;sat.add(tel);
+const bk=new THREE.Mesh(new THREE.SphereGeometry(.04,12,12),new THREE.MeshBasicMaterial({color:0xff3b3b}));bk.position.set(.18,.24,.2);sat.add(bk);
+const bm=new THREE.Mesh(new THREE.ConeGeometry(.55,3,32,1,true),new THREE.MeshBasicMaterial({color:0x9cc4ff,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));bm.position.y=-1.8;sat.add(bm);
+sat.scale.setScalar(.24);cam3.add(sat);
+function rs(){const w=innerWidth,h=innerHeight;r.setSize(w,h,false);cam3.aspect=w/h;cam3.updateProjectionMatrix();cu.res.value.set(w,h)}addEventListener('resize',rs);rs();
+(function L(now){requestAnimationFrame(L);stp(now);const t=now/1000;sat.visible=cur==0||cur==9;
+if(sat.visible){const on=Math.floor(t*1.2)%2==0;sat.position.set(1.3-(t%200)*.004,.55+Math.sin(t*.1)*.04,-3);sat.rotation.set(.5+Math.sin(t*.05)*.1,t*.06,-.55);bk.visible=on;bm.material.opacity=on?.16:.03}
+cu.t.value=t;cu.cov.value=S.cov;cu.zm.value=S.zm;r.clear();if(S.cov>-.3)r.render(cs,oc);if(sat.visible)r.render(sc3,cam3)})(performance.now())}
+
+/* ---------- Cesium: real satellite imagery globe ---------- */
+const viewer=new Cesium.Viewer('cz',{baseLayer:new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maximumLevel:15,credit:'Imagery © Esri, Maxar, Earthstar Geographics'})),animation:false,timeline:false,baseLayerPicker:false,geocoder:false,homeButton:false,sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false,vrButton:false});
+const sc=viewer.scene,cam=viewer.camera;
+sc.globe.enableLighting=true;sc.globe.showGroundAtmosphere=true;sc.globe.maximumScreenSpaceError=1.1;sc.moon.show=false;sc.sun.show=false;sc.fog.enabled=false;
+viewer.resolutionScale=Math.min(devicePixelRatio||1,2);viewer.clock.shouldAnimate=false;viewer.clock.currentTime=Cesium.JulianDate.fromIso8601('2026-03-21T10:30:00Z');
+sc.screenSpaceCameraController.enableInputs=false;
+const rad=Cesium.Math.toRadians;
+cam.setView({destination:Cesium.Cartesian3.fromDegrees(28,18,1.5e7),orientation:{heading:0,pitch:rad(-70),roll:0}});
+let spin=true;sc.postRender.addEventListener(()=>{if(spin)cam.rotate(Cesium.Cartesian3.UNIT_Z,-.00012)});
+const fly=(lon,lat,h,dur,o={})=>new Promise(res=>cam.flyTo({destination:Cesium.Cartesian3.fromDegrees(lon,lat,h),orientation:{heading:rad(o.hd||0),pitch:rad(o.pt??-90),roll:0},duration:dur,maximumHeight:o.mh,easingFunction:Cesium.EasingFunction.CUBIC_IN_OUT,complete:res,cancel:res}));
+let pend=0;sc.globe.tileLoadProgressEvent.addEventListener(n=>pend=n);
+const until=(f,ms)=>new Promise(r=>{const t0=Date.now();(function c(){f()||Date.now()-t0>ms?r():setTimeout(c,120)})()});
+const CEN=g=>[(g.ext[0]+g.ext[2])/2,(g.ext[1]+g.ext[3])/2];
+function fitH(ext){const [w,s,e,n]=ext,Wm=(e-w)*111320*Math.cos((s+n)/2*Math.PI/180),Hm=(n-s)*110574,fy=cam.frustum.fovy,as=cam.frustum.aspectRatio||innerWidth/innerHeight,fx=2*Math.atan(Math.tan(fy/2)*as);return Math.max(Wm/2/Math.tan(fx/2),Hm/2/Math.tan(fy/2))*1.12}
+
+/* analysis draped on the globe: wipe (contours) or pixel burst (raster classes), driven by a shader */
+const PM={},ENT=[];
+function drape(g,m,cells){let o=PM[g.img];if(!o){const [w,s,e,n]=g.ext,asp=(e-w)*Math.cos((s+n)/2*Math.PI/180)/(n-s),cx=g.b.reduce((a,p)=>a+p[0],0)/g.b.length,cy=g.b.reduce((a,p)=>a+p[1],0)/g.b.length,c=new Cesium.Cartesian2((cx-w)/(e-w),(cy-s)/(n-s));
+const mat=new Cesium.Material({translucent:true,fabric:{uniforms:{image:'images/'+g.img,p:0,m:m,g:new Cesium.Cartesian2(cells,cells/asp),c:c,asp:asp},source:`czm_material czm_getMaterial(czm_materialInput mi){czm_material r=czm_getDefaultMaterial(mi);vec2 st=mi.st;float v=1.;
+if(m<.5){v=step(1.-p,st.y);}else{vec2 q=(floor(st*g)+.5)/g;float nz=fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);float d=length((q-c)*vec2(asp,1.));v=step(d-.05*nz,p);}
+vec4 t=texture(image,st);r.diffuse=t.rgb;r.alpha=t.a*v;return r;}`}});
+const pr=sc.primitives.add(new Cesium.Primitive({asynchronous:false,geometryInstances:new Cesium.GeometryInstance({geometry:new Cesium.RectangleGeometry({rectangle:Cesium.Rectangle.fromDegrees(w,s,e,n),height:20,vertexFormat:Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT})}),appearance:new Cesium.EllipsoidSurfaceAppearance({material:mat,aboveGround:false})}));
+o=PM[g.img]={mat,pr,rm:Math.hypot(Math.max(c.x,1-c.x)*asp,Math.max(c.y,1-c.y))+.08}}
+o.pr.show=true;o.mat.uniforms.p=0;return{set:p=>{o.mat.uniforms.p=m?p*o.rm:p}}}
+/* dashed boundary that draws itself */
+function bnd(pts){const pos=Cesium.Cartesian3.fromDegreesArrayHeights(pts.flatMap(p=>[p[0],p[1],25]));let k=0;const cb=new Cesium.CallbackProperty(()=>pos.slice(0,Math.max(2,Math.round(k*pos.length))),false),mk=(w,mat)=>ENT.push(viewer.entities.add({polyline:{positions:cb,width:w,material:mat,arcType:Cesium.ArcType.NONE}}));
+mk(14,new Cesium.PolylineGlowMaterialProperty({glowPower:.3,color:Cesium.Color.fromCssColorString('#a9c8ff').withAlpha(.55)}));mk(4,new Cesium.PolylineDashMaterialProperty({color:Cesium.Color.WHITE,gapColor:Cesium.Color.TRANSPARENT,dashLength:20}));return v=>{k=v}}
+/* expanding ring for each service point */
+function ring(lon,lat,dl){const t0=performance.now()+dl,pp=()=>Math.min(1,Math.max(0,(performance.now()-t0)/1500)),rd=new Cesium.CallbackProperty(()=>40+pp()*600,false);
+ENT.push(viewer.entities.add({position:Cesium.Cartesian3.fromDegrees(lon,lat,30),point:{pixelSize:11,color:Cesium.Color.ORANGE,outlineColor:Cesium.Color.BLACK,outlineWidth:2,show:true},ellipse:{semiMajorAxis:rd,semiMinorAxis:rd,height:30,material:new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(()=>Cesium.Color.ORANGE.withAlpha(.45*(1-pp())),false))}}))}
+function clean(){ENT.splice(0).forEach(e=>viewer.entities.remove(e));Object.values(PM).forEach(o=>o.pr.show=false)}
+
+/* ---------- content ---------- */
+const T0={1:['Digital Elevation Model','Let’s see what we can do with a DEM!','Down from orbit, we turn heights into maps.'],3:['Vegetation analysis','Let’s do NDVI!','Next stop: Port Said.'],5:['Geology','Let’s do geological maps!','Next stop: Syria.'],7:['Network analysis','Let’s analyze the services of El Shorouk!','Service areas and route analysis.']};
+for(const i in T0)$('main').insertAdjacentHTML('beforeend',`<section class="sc cld" id="s${i}"><div class="tx"><small class="a">${T0[i][0]}</small><h2 class="a" style="--i:1">${T0[i][1]}</h2><p class="a" style="--i:2">${T0[i][2]}</p></div></section>`);
+const LG={lg3:['Elevation (m)',['#f9dcc0','0–20'],['#f1c3a4','20–32'],['#e8aa8b','32–47'],['#e2917a','47–65'],['#dd7a66','65–80'],['#d9604e','80–90'],['#d5473b','90–100'],['#cf2f27','100–110'],['#c80f0f','110–127']],lgn:['NDVI classes',['#fbe3a8','Desert, built-up or water'],['#8fe000','Vegetation'],['#3d6b0a','Dense vegetation']]};
+for(const k in LG)$('#'+k).innerHTML='<b>'+LG[k][0]+'</b>'+LG[k].slice(1).map(r=>`<p><i style="background:${r[0]}"></i>${r[1]}</p>`).join('');
+const IM={};['rt','rt-b'].forEach(n=>{const i=new Image();i.src='images/'+n+'.jpg';IM[n]=i});
+function prep(cv,b,c){cv._k=(cv._k||0)+1;const w=cv.width=IM[c].naturalWidth,h=cv.height=IM[c].naturalHeight;cv.getContext('2d').drawImage(IM[b],0,0,w,h)}
+function pix(cv,c,cs,cells,dur){const k=cv._k=(cv._k||0)+1,x=cv.getContext('2d'),W=cv.width,H=cv.height,I=IM[c],gx=Math.ceil(W/cs),gy=Math.ceil(H/cs),dn=new Uint8Array(gx*gy),R=Math.hypot(W,H),t0=performance.now();
+(function f(n){if(cv._k!=k)return;const t=(n-t0)/dur;for(let j=0;j<gy;j++)for(let i=0;i<gx;i++){const q=j*gx+i;if(dn[q])continue;const px=i*cs+cs/2,py=j*cs+cs/2,nz=Math.abs((Math.sin(q*12.9898)*43758.5453)%1);for(const e of cells)if(Math.hypot(px-e[0]*W,py-e[1]*H)<Math.max(0,t-e[2])*R*e[3]+nz*cs*3){dn[q]=1;x.drawImage(I,i*cs,j*cs,cs,cs,i*cs,j*cs,cs,cs);break}}if(t<2)requestAnimationFrame(f)})(t0)}
+function ty(el,L){const k=el._k=(el._k||0)+1;el.textContent='';let i=0,j=0;(function f(){if(el._k!=k||i>=L.length)return;if(j<L[i].length){el.textContent+=L[i][j++];setTimeout(f,26)}else{el.textContent+='\n';i++;j=0;setTimeout(f,260)}})()}
+
+/* ---------- slide engine ---------- */
+const D=[10,5,19,5,14,5,14,5,16,6],N=D.length;
+const NM=['Welcome','Descent','Ras El Hekma · Terrain','Next · NDVI','Port Said · NDVI','Next · Geology','Syria · Geology','Next · Service area','El Shorouk · Analysis','Contact'];
+const sec=D.map((_,i)=>$('#s'+i)),pg=$('#pg'),pp=$('#pp'),RS=['p0','p1','p2','p3','p4','p5','cp','fm','lv','dive'];
+let cur=-1,gen=0,T=[],AN=[],tm,end,rem,paused=false;
+const at=(ms,f)=>T.push(setTimeout(f,ms)),ad=(s,c)=>s.classList.add(c),W=ms=>new Promise(r=>at(ms,r));
+const hud=t=>{const h=$('#hud');if(t){h.textContent=t;h.classList.add('on')}else h.classList.remove('on')};
+function flash(c){const f=$('#fl');f.style.setProperty('--fc',c);f.classList.remove('go');void f.offsetWidth;f.classList.add('go')}
+function anim(dur,fn,dl=0){AN.push({t0:performance.now()+dl,dur,fn,k:gen})}
+(function A(now){requestAnimationFrame(A);for(let i=AN.length-1;i>=0;i--){const a=AN[i];if(a.k!=gen){AN.splice(i,1);continue}if(now<a.t0)continue;const p=Math.min(1,(now-a.t0)/a.dur);a.fn(ez(p),p);if(p>=1)AN.splice(i,1)}})();
+const R={2:'rh',4:'ps',6:'sy',8:'sh'};
+/* 1) camera comes in from altitude, clouds clear, tiles sharpen */
+async function arrive(n){const g=GEO[R[n]],c=CEN(g);tw({cov:-1,zm:1},1700);await fly(c[0],c[1],fitH(g.ext),3.3);await new Promise(r=>setTimeout(r,700));await until(()=>pend==0,3200);return 1}
+const E={};
+E[0]=async s=>{tw({cov:-1,zm:1},1500);if(!spin){await fly(28,18,1.5e7,3.4,{pt:-70,mh:2.2e7});spin=true}};
+[1,3,5,7].forEach(n=>E[n]=async s=>{const c=CEN(GEO[R[n+1]]);tw({cov:.85,zm:1.4},1500);await fly(c[0],c[1],2.6e6,3.4)});
+E[9]=async s=>{tw({cov:-1,zm:1},1500);await fly(28,18,1.5e7,3.4,{pt:-70,mh:2.2e7});spin=true};
+/* 2) boundary draws itself -> 3) analysis appears on the globe -> 4) the layout opens */
+E[2]=async s=>{const k=gen;await arrive(2);if(k!=gen)return;const g=GEO.rh;ad(s,'cp');hud('Drawing the study-area boundary');const B=bnd(g.b);anim(1800,e=>B(e));await W(2000);
+hud('Contour lines · 20 m and 100 m');const d=drape(g,0,1);anim(3000,(e,p)=>d.set(p));await W(3400);hud('Layout');ad(s,'fm');await W(2600);hud('');flash('#ff2a1a');ad(s,'p2');await W(1100);ad(s,'p3');await W(1700);ad(s,'p4')};
+E[4]=async s=>{const k=gen;await arrive(4);if(k!=gen)return;const g=GEO.ps;ad(s,'cp');hud('Drawing the study-area boundary');const B=bnd(g.b);anim(1600,e=>B(e));await W(1800);
+hud('NDVI = (NIR − Red) / (NIR + Red)');flash('#ffffff');const d=drape(g,1,100);anim(2800,(e,p)=>d.set(p));await W(3300);hud('Layout');ad(s,'fm');ad(s,'p4');await W(1500);hud('')};
+E[6]=async s=>{const k=gen;await arrive(6);if(k!=gen)return;const g=GEO.sy;ad(s,'cp');hud('Drawing the study-area boundary');const B=bnd(g.b);anim(1600,e=>B(e));await W(1800);
+hud('Geological units');flash('#ffffff');const d=drape(g,1,80);anim(2800,(e,p)=>d.set(p));await W(3300);hud('Layout');ad(s,'fm');ad(s,'p4');await W(1500);hud('')};
+E[8]=async s=>{const k=gen;const c=$('#cr'),rp=$('#tp');rp.textContent='';prep(c,'rt-b','rt');await arrive(8);if(k!=gen)return;const g=GEO.sh;ad(s,'cp');hud('Drawing the study-area boundary');const B=bnd(g.b);anim(1600,e=>B(e));await W(1800);
+hud('Service areas, grown from each facility');flash('#ffb25a');const d=drape(g,1,90);anim(2800,(e,p)=>d.set(p));g.dots.forEach((p,i)=>ring(p[0],p[1],i*160));await W(3300);hud('Layout');ad(s,'fm');await W(1800);hud('');
+ad(s,'p5');pix(c,'rt',Math.round(c.width/70),[[.284,.181,0,.8]],3000);ty(rp,['› Origin and destination set','› Solving the shortest path…','› Optimal route found along the road network'])};
+/* leaving: camera pulls away and clouds roll in */
+function X(c){tw({cov:1.1,zm:2.6},1100);if(c==0){spin=false;fly(31,27,4e6,1.3)}else if(R[c]){const p=CEN(GEO[R[c]]);fly(p[0],p[1],2.4e6,1.3)}}
+
+function sch(ms){clearTimeout(tm);end=Date.now()+ms;if(!paused)tm=setTimeout(()=>go(cur+1),ms)}
+function go(n){n=(n+N)%N;T.forEach(clearTimeout);T=[];clearTimeout(tm);gen++;hud('');const f=cur<0,w=f?0:1100;
+if(!f){ad(sec[cur],cur?'lv':'dive');X(cur)}
+at(w,()=>{clean();sec.forEach(s=>s.classList.remove('on',...RS));ad(sec[n],'on');cur=n;E[n]&&E[n](sec[n]);
+$$('#dts a').forEach((a,i)=>a.classList.toggle('on',i==n));$('#nm').textContent=NM[n];pg.style.animation='none';void pg.offsetWidth;pg.style.animation=`pg ${D[n]}s linear forwards`;pg.style.animationPlayState=paused?'paused':'running'});
+sch(w+D[n]*1000)}
+for(let i=0;i<N;i++){const a=document.createElement('a');a.href='#';a.title=NM[i];a.onclick=e=>{e.preventDefault();go(i)};$('#dts').appendChild(a)}
+$('#pv').onclick=()=>go(cur-1);$('#nx').onclick=()=>go(cur+1);
+pp.onclick=()=>{paused=!paused;pp.textContent=paused?'Play':'Pause';pg.style.animationPlayState=paused?'paused':'running';if(paused){clearTimeout(tm);rem=end-Date.now()}else sch(Math.max(rem,800))};
+addEventListener('keydown',e=>{if(e.key=='ArrowRight')go(cur+1);if(e.key=='ArrowLeft')go(cur-1);if(e.key==' '){e.preventDefault();pp.click()}});
+/* 3D terrain card follows the pointer, sways when idle */
+let mx=0,my=0,hv=0;addEventListener('pointermove',e=>{hv=1;mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
+(function L(){const s=sec[2];if(cur==2&&s.classList.contains('p3')){const t=performance.now()/1000;s.style.setProperty('--rx',hv?-my*14:Math.sin(t*.6)*3);s.style.setProperty('--ry',hv?mx*20:Math.cos(t*.5)*5)}requestAnimationFrame(L)})();
+go(0);
+try{initFX()}catch(e){console.warn('Overlay unavailable',e)}
+</script>
+</body>
+</html>
